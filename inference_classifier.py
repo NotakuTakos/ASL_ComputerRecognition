@@ -1,8 +1,18 @@
+import os
 import streamlit as st
 import cv2
 import pickle
 import numpy as np
 from cvzone.HandTrackingModule import HandDetector
+
+
+if st.button("Shut Down Server", type="primary"):
+    # Safely release the camera if it was stored in session state
+    if 'cap' in st.session_state and st.session_state.cap.isOpened():
+        st.session_state.cap.release()
+
+    # Hard exit the Python process (works reliably across Windows/Mac/Linux)
+    os._exit(0)
 
 # 1. Setup Streamlit UI
 st.set_page_config(page_title="Sign Language Detector", layout="wide")
@@ -39,18 +49,32 @@ labels_dict = {0: 'A', 1: 'B', 2: 'C', 3: 'D', 4: 'E', 5: 'F', 6: 'G', 7: 'H',
                34: '9', 35: '0'}
 
 # 3. Create controls
+# ADDED: A dropdown menu to let the user select which camera to use
+camera_index = st.selectbox(
+    "Select Camera Device",
+    options=[0, 1, 2, 3, 4],
+    index=0,
+    help="0 is the default/built-in camera. Select 1, 2, etc., for external USB webcams."
+)
+
 run = st.checkbox('Start Webcam')
 FRAME_WINDOW = st.image([])
 
+
+
+
 # 4. Open and manage camera with guaranteed cleanup
 if run:
-    cap = cv2.VideoCapture(0)
+    # 1. Initialize and store in session_state
+    if 'cap' not in st.session_state or not st.session_state.cap.isOpened():
+        st.session_state.cap = cv2.VideoCapture(camera_index)
 
     try:
         while run:
-            ret, frame = cap.read()
+            # 2. Read from the session_state camera object
+            ret, frame = st.session_state.cap.read()
             if not ret:
-                st.error("Failed to capture video from webcam.")
+                st.error("Failed to capture video.")
                 break
 
             # Process the frame
@@ -88,10 +112,12 @@ if run:
             img_rgb = cv2.cvtColor(img_drawn, cv2.COLOR_BGR2RGB)
             FRAME_WINDOW.image(img_rgb)
 
+
     finally:
-        # GUARANTEED CLEANUP: Executes whether the user unchecks the box,
-        # an exception occurs, or Ctrl+C is pressed.
-        cap.release()
+
+        # 3. Clean up when the loop breaks
+        if 'cap' in st.session_state and st.session_state.cap.isOpened():
+            st.session_state.cap.release()
         cv2.destroyAllWindows()
         FRAME_WINDOW.empty()
 
