@@ -97,9 +97,12 @@ RTC_CONFIGURATION = {
 }
 
 # 4. Start the Stream
-webrtc_streamer(
-    key="sign_language",
-    video_processor_factory=SignLanguageProcessor,
-    rtc_configuration=RTC_CONFIGURATION,
-    media_stream_constraints={"video": True, "audio": False},
-)
+
+col1, col2, col3 = st.columns([1, 2, 1])
+with col2:
+    webrtc_streamer(
+        key="sign_language",
+        video_processor_factory=SignLanguageProcessor,
+        rtc_configuration=RTC_CONFIGURATION,
+        media_stream_constraints={"video": True, "audio": False},
+    )
