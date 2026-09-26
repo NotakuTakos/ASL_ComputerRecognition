@@ -12,8 +12,6 @@ st.set_page_config(page_title="Sign Language Detector", layout="wide")
 st.title("Sign Language Recognition")
 st.write("Grant camera permissions to start detecting sign language.")
 
-st.image("ASLChart.png", caption="ASL Alphabet Reference Guide", width=600)
-
 # Constants
 HAND_CONNECTIONS = [
     (0, 1), (1, 2), (2, 3), (3, 4),
@@ -98,7 +96,7 @@ RTC_CONFIGURATION = {
 
 # 4. Start the Stream
 
-col1, col2 = st.columns([1, 1])
+col1, col2 = st.columns(2)
 with col2:
     webrtc_streamer(
         key="sign_language",
@@ -106,3 +104,5 @@ with col2:
         rtc_configuration=RTC_CONFIGURATION,
         media_stream_constraints={"video": True, "audio": False},
     )
+with col1:
+    st.image("ASLChart.png", caption="ASL Alphabet Reference Guide", width=600)
