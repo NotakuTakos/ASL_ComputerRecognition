@@ -5,10 +5,15 @@ DATA_DIR = './data/'
 if not os.path.exists(DATA_DIR):
     os.makedirs(DATA_DIR)
 
-number_of_classes = 3 #amount of different letters/numbers in ALS
+number_of_classes = 36 #amount of different letters/numbers in ALS
 dataset_size = 100 #how many images are for per ALS letter/number
 
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+if not cap.isOpened():
+    print("Cannot open camera")
+    exit()
+
+
 for j in range(number_of_classes):
     if not os.path.exists(os.path.join(DATA_DIR, str(j))):
         os.makedirs(os.path.join(DATA_DIR, str(j)))
