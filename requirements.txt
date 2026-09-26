@@ -5,3 +5,5 @@ opencv_python_headless==5.0.0.93
 scikit_learn==1.9.1
 streamlit==1.64.0
 streamlit-webrtc
+mediapipe
+av
