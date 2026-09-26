@@ -12,6 +12,8 @@ st.set_page_config(page_title="Sign Language Detector", layout="wide")
 st.title("Sign Language Recognition")
 st.write("Grant camera permissions to start detecting sign language.")
 
+st.image("asl_reference.png", caption="ASL Alphabet Reference Guide", width=600)
+
 # Constants
 HAND_CONNECTIONS = [
     (0, 1), (1, 2), (2, 3), (3, 4),
