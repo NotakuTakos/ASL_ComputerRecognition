@@ -1,14 +1,25 @@
+import streamlit as st
 import cv2
 import pickle
 import numpy as np
 from cvzone.HandTrackingModule import HandDetector
 
-# Load model
-model_dict = pickle.load(open('./model.p', 'rb'))
-model = model_dict['model']
+# 1. Setup Streamlit UI
+st.set_page_config(page_title="Sign Language Detector", layout="wide")
+st.title("Sign Language Recognition")
+st.write("Turn on the webcam to start detecting sign language.")
 
-cap = cv2.VideoCapture(0)
 
+# 2. Cache the model loading so it doesn't reload every time you interact with the UI
+@st.cache_resource
+def load_model():
+    model_dict = pickle.load(open('./model.p', 'rb'))
+    return model_dict['model']
+
+
+model = load_model()
+
+# Constants
 HAND_CONNECTIONS = [
     (0, 1), (1, 2), (2, 3), (3, 4),
     (0, 5), (5, 6), (6, 7), (7, 8),
@@ -18,59 +29,73 @@ HAND_CONNECTIONS = [
     (5, 9), (9, 13), (13, 17)
 ]
 
-detector = HandDetector(staticMode=False, maxHands=1, detectionCon=0.3)
-
 labels_dict = {0: 'A', 1: 'B', 2: 'C', 3: 'D', 4: 'E', 5: 'F', 6: 'G', 7: 'H',
                8: 'I', 9: 'J', 10: 'K', 11: 'L', 12: 'M', 13: 'N', 14: 'O', 15: 'P',
                16: 'Q', 17: 'R', 18: 'S', 19: 'T', 20: 'U', 21: 'V', 22: 'W', 23: 'X', 24: 'Y',
                25: 'Z', 26: '1', 27: '2', 28: '3', 29: '4', 30: '5', 31: '6', 32: '7', 33: '8',
                34: '9', 35: '0'}
 
-while True:
-    ret, frame = cap.read()
-    if not ret:
-        break
+detector = HandDetector(staticMode=False, maxHands=1, detectionCon=0.3)
 
-    hands, img_drawn = detector.findHands(frame, draw=False)
+# 3. Create a Checkbox to start/stop the webcam
+run = st.checkbox('Start Webcam')
 
-    if hands:
-        for hand in hands:
-            lmList = hand['lmList']
-            data_aux = []
-            x_vals = [lm[0] for lm in lmList]
-            y_vals = [lm[1] for lm in lmList]
+# 4. Create an empty placeholder for the video frame
+FRAME_WINDOW = st.image([])
 
-            # Build feature vector once
-            for lm in lmList:
-                data_aux.extend([lm[0], lm[1]])
+# 5. Open the camera ONLY if the checkbox is checked
+if run:
+    cap = cv2.VideoCapture(0)
 
-            for lm in lmList:
-                data_aux.extend([lm[0] - min(x_vals), lm[1] - min(y_vals)])
+    while run:
+        ret, frame = cap.read()
+        if not ret:
+            st.error("Failed to capture video from webcam.")
+            break
 
-            # 1. Draw custom skeleton connections
-            for p1, p2 in HAND_CONNECTIONS:
-                x1, y1 = lmList[p1][0], lmList[p1][1]
-                x2, y2 = lmList[p2][0], lmList[p2][1]
-                cv2.line(img_drawn, (x1, y1), (x2, y2), (0, 255, 0), 2)
+        # Process the frame
+        hands, img_drawn = detector.findHands(frame, draw=False)
 
-            # 2. Draw circles for each landmark
-            for lm in lmList:
-                cx, cy = lm[0], lm[1]
-                cv2.circle(img_drawn, (cx, cy), 4, (0, 0, 255), cv2.FILLED)
+        if hands:
+            for hand in hands:
+                lmList = hand['lmList']
+                data_aux = []
+                x_vals = [lm[0] for lm in lmList]
+                y_vals = [lm[1] for lm in lmList]
 
-            # 3. Predict ONCE per hand
-            prediction = model.predict([np.asarray(data_aux)])
-            predicted_character = labels_dict[int(prediction[0])]
+                # Build feature vector once
+                for lm in lmList:
+                    data_aux.extend([lm[0], lm[1]])
 
-            # 4. Display prediction text once
-            x_min, y_min = min(x_vals), min(y_vals)
-            cv2.putText(img_drawn, predicted_character, (x_min, y_min - 10),
-                        cv2.FONT_HERSHEY_SIMPLEX, 1.3, (0, 255, 0), 3, cv2.LINE_AA)
+                for lm in lmList:
+                    data_aux.extend([lm[0] - min(x_vals), lm[1] - min(y_vals)])
 
-    cv2.imshow('Hand Skeleton', img_drawn)
+                # Draw custom skeleton connections
+                for p1, p2 in HAND_CONNECTIONS:
+                    x1, y1 = lmList[p1][0], lmList[p1][1]
+                    x2, y2 = lmList[p2][0], lmList[p2][1]
+                    cv2.line(img_drawn, (x1, y1), (x2, y2), (0, 255, 0), 2)
 
-    if cv2.waitKey(1) & 0xFF == ord(' '):
-        break
+                # Draw circles for each landmark
+                for lm in lmList:
+                    cx, cy = lm[0], lm[1]
+                    cv2.circle(img_drawn, (cx, cy), 4, (0, 0, 255), cv2.FILLED)
 
-cap.release()
-cv2.destroyAllWindows()
+                # Predict ONCE per hand
+                prediction = model.predict([np.asarray(data_aux)])
+                predicted_character = labels_dict[int(prediction[0])]
+
+                # Display prediction text once
+                x_min, y_min = min(x_vals), min(y_vals)
+                cv2.putText(img_drawn, predicted_character, (x_min, y_min - 10),
+                            cv2.FONT_HERSHEY_SIMPLEX, 1.3, (0, 255, 0), 3, cv2.LINE_AA)
+
+        # 6. Convert BGR (OpenCV) to RGB (Streamlit)
+        img_rgb = cv2.cvtColor(img_drawn, cv2.COLOR_BGR2RGB)
+
+        # 7. Update the image placeholder
+        FRAME_WINDOW.image(img_rgb)
+
+    cap.release()
+else:
+    st.info("Click the checkbox to start the webcam feed.")
