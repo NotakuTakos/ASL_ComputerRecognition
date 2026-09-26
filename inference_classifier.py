@@ -5,6 +5,7 @@ import numpy as np
 import av
 from cvzone.HandTrackingModule import HandDetector
 from streamlit_webrtc import webrtc_streamer, VideoProcessorBase
+from twilio.rest import Client
 
 # 1. Setup Streamlit UI
 st.set_page_config(page_title="Sign Language Detector", layout="wide")
@@ -28,7 +29,6 @@ labels_dict = {0: 'A', 1: 'B', 2: 'C', 3: 'D', 4: 'E', 5: 'F', 6: 'G', 7: 'H',
                34: '9', 35: '0'}
 
 # 2. Define the WebRTC Video Processor
-# In Streamlit Cloud, video processing happens in a separate background thread.
 class SignLanguageProcessor(VideoProcessorBase):
     def __init__(self):
         # Load models inside the init function so they exist in the correct thread
@@ -77,9 +77,21 @@ class SignLanguageProcessor(VideoProcessorBase):
 
 
 # 3. WebRTC Configuration
-# STUN servers help the cloud app punch through firewalls to reach the user's webcam
+@st.cache_data(ttl=3600)
+def get_ice_servers():
+    """Use Twilio's TURN server to fall back to if direct connection fails."""
+    try:
+        account_sid = st.secrets["TWILIO_ACCOUNT_SID"]
+        auth_token = st.secrets["TWILIO_AUTH_TOKEN"]
+        client = Client(account_sid, auth_token)
+        token = client.tokens.create()
+        return token.ice_servers
+    except Exception as e:
+        st.warning("Twilio credentials not found in secrets. Falling back to free Google STUN.")
+        return [{"urls": ["stun:stun.l.google.com:19302"]}]
+
 RTC_CONFIGURATION = {
-    "iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]
+    "iceServers": get_ice_servers()
 }
 
 # 4. Start the Stream
