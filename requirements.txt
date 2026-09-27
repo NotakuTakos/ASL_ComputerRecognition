@@ -8,3 +8,4 @@ streamlit-webrtc
 mediapipe
 av
 twilio
+opencv-python

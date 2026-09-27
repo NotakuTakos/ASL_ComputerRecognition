@@ -39,11 +39,7 @@ for i in range(36):
                 x_vals = [lm[0] for lm in lmList]
                 y_vals = [lm[1] for lm in lmList]
 
-                # 3. Append 42 raw coordinates
-                for lm in lmList:
-                    data_aux.extend([lm[0], lm[1]])
-
-                # 4. Append 42 normalized/relative coordinates
+                # Only append normalized/relative coordinates (42 features total)
                 for lm in lmList:
                     data_aux.extend([lm[0] - min(x_vals), lm[1] - min(y_vals)])
 

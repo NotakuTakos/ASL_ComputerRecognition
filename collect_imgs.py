@@ -6,7 +6,7 @@ if not os.path.exists(DATA_DIR):
     os.makedirs(DATA_DIR)
 
 number_of_classes = 36 #amount of different letters/numbers in ALS
-dataset_size = 200 #how many images are for per ALS letter/number
+dataset_size = 500 #how many images are for per ALS letter/number
 
 cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
 if not cap.isOpened():
