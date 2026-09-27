@@ -37,8 +37,8 @@ class SignLanguageProcessor(VideoProcessorBase):
         self.detector = HandDetector(staticMode=False, maxHands=1, detectionCon=0.3)
 
     def recv(self, frame: av.VideoFrame) -> av.VideoFrame:
-        # Convert the browser's video frame to an OpenCV readable array
-        img = frame.to_ndarray(format="bgr24")
+        # Add .copy() to unlock the array so OpenCV can draw on it!
+        img = frame.to_ndarray(format="bgr24").copy()
 
         # Process the frame
         hands, img_drawn = self.detector.findHands(img, draw=False)
@@ -79,6 +79,7 @@ class SignLanguageProcessor(VideoProcessorBase):
                 # If anything crashes, print it to the server console but don't freeze the video!
                 print(f"Background prediction error: {e}")
 
+        return av.VideoFrame.from_ndarray(img_drawn, format="bgr24")
 
 # 3. WebRTC Configuration
 @st.cache_data(ttl=3600)
