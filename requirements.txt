@@ -9,3 +9,4 @@ mediapipe
 av
 twilio
 opencv-python
+twilio-api
