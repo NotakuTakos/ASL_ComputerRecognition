@@ -44,36 +44,40 @@ class SignLanguageProcessor(VideoProcessorBase):
         hands, img_drawn = self.detector.findHands(img, draw=False)
 
         if hands:
-            for hand in hands:
-                lmList = hand['lmList']
-                data_aux = []
-                x_vals = [lm[0] for lm in lmList]
-                y_vals = [lm[1] for lm in lmList]
+            try:
+                for hand in hands:
+                    lmList = hand['lmList']
+                    data_aux = []
+                    x_vals = [lm[0] for lm in lmList]
+                    y_vals = [lm[1] for lm in lmList]
 
-                for lm in lmList:
-                    data_aux.extend([lm[0], lm[1]])
+                    # ONLY extract the normalized/relative coordinates (42 features total)
+                    for lm in lmList:
+                        data_aux.extend([lm[0] - min(x_vals), lm[1] - min(y_vals)])
 
-                for lm in lmList:
-                    data_aux.extend([lm[0] - min(x_vals), lm[1] - min(y_vals)])
+                    # Draw connections
+                    for p1, p2 in HAND_CONNECTIONS:
+                        x1, y1 = lmList[p1][0], lmList[p1][1]
+                        x2, y2 = lmList[p2][0], lmList[p2][1]
+                        cv2.line(img_drawn, (x1, y1), (x2, y2), (0, 255, 0), 2)
 
-                for p1, p2 in HAND_CONNECTIONS:
-                    x1, y1 = lmList[p1][0], lmList[p1][1]
-                    x2, y2 = lmList[p2][0], lmList[p2][1]
-                    cv2.line(img_drawn, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                    # Draw points
+                    for lm in lmList:
+                        cx, cy = lm[0], lm[1]
+                        cv2.circle(img_drawn, (cx, cy), 4, (0, 0, 255), cv2.FILLED)
 
-                for lm in lmList:
-                    cx, cy = lm[0], lm[1]
-                    cv2.circle(img_drawn, (cx, cy), 4, (0, 0, 255), cv2.FILLED)
+                    # Predict using the 42 features
+                    prediction = self.model.predict([np.asarray(data_aux)])
+                    predicted_character = labels_dict[int(prediction[0])]
 
-                prediction = self.model.predict([np.asarray(data_aux)])
-                predicted_character = labels_dict[int(prediction[0])]
+                    # Display the prediction on screen
+                    x_min, y_min = min(x_vals), min(y_vals)
+                    cv2.putText(img_drawn, predicted_character, (x_min, y_min - 10),
+                                cv2.FONT_HERSHEY_SIMPLEX, 1.3, (0, 255, 0), 3, cv2.LINE_AA)
 
-                x_min, y_min = min(x_vals), min(y_vals)
-                cv2.putText(img_drawn, predicted_character, (x_min, y_min - 10),
-                            cv2.FONT_HERSHEY_SIMPLEX, 1.3, (0, 255, 0), 3, cv2.LINE_AA)
-
-        # Return the annotated frame back to the browser
-        return av.VideoFrame.from_ndarray(img_drawn, format="bgr24")
+            except Exception as e:
+                # If anything crashes, print it to the server console but don't freeze the video!
+                print(f"Background prediction error: {e}")
 
 
 # 3. WebRTC Configuration
